@@ -17,6 +17,16 @@
       margin-top: 1.56rem;
       display: flex;
     }
+
+    & > p {
+      margin-top: 1rem;
+      font-style: italic;
+      font-weight: 400;
+      font-size: 0.875rem;
+      line-height: 1.1rem;
+
+      color: var(--gray-300);
+    }
   }
 
   .postContent {
@@ -49,6 +59,55 @@
       li {
         margin: 0.5rem 0;
       }
+    }
+  }
+
+  footer {
+    width: 100%;
+    margin: 5rem 0;
+    border-top: 1px solid rgba(215, 215, 215, 0.1);
+
+    .navigationContainer {
+      width: 100%;
+      height: 49px;
+
+      margin: 3rem 0 5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      span {
+        p {
+          font-weight: 400;
+          font-size: 1.125rem;
+          line-height: 1.375rem;
+          letter-spacing: -0.5px;
+          color: var(--gray-100);
+        }
+
+        a {
+          font-weight: 600;
+          font-size: 1rem;
+          line-height: 1.18rem;
+          letter-spacing: -0.5px;
+          color: var(--highlight);
+          cursor: pointer;
+
+          transition: text-decoration 0.2s;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+
+        & + span {
+          text-align: end;
+        }
+      }
+    }
+
+    section + button {
+      margin-top: 5rem;
     }
   }
 }

@@ -5,6 +5,7 @@ import Head from 'next/head';
 import Header from '../../components/Header';
 import { FiCalendar, FiUser, FiClock } from 'react-icons/fi';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 
 import { format } from 'date-fns';
 import ptBR from 'date-fns/locale/pt-BR';
@@ -12,9 +13,12 @@ import { getPrismicClient } from '../../services/prismic';
 
 import commonStyles from '../../styles/common.module.scss';
 import styles from './post.module.scss';
+import Comments from '../../components/Comments';
+import ExitPreview from '../../components/ExitPreview';
 
 interface Post {
   first_publication_date: string | null;
+  last_publication_date: string | null;
   data: {
     title: string;
     banner: {
@@ -30,11 +34,20 @@ interface Post {
   };
 }
 
+type page = {
+  uid: string;
+  title: string;
+};
 interface PostProps {
   post: Post;
+  preview: boolean;
+  navigation: {
+    prevPage: page;
+    nextPage: page;
+  };
 }
 
-export default function Post({ post }: PostProps) {
+export default function Post({ post, preview, navigation }: PostProps) {
   const router = useRouter();
 
   if (router.isFallback) {
@@ -101,6 +114,19 @@ export default function Post({ post }: PostProps) {
                 <p>{`${getReadingTime()} min`}</p>
               </div>
             </div>
+
+            {post.last_publication_date !== post.first_publication_date && (
+              <p>
+                * editado em{' '}
+                {format(
+                  new Date(post.last_publication_date),
+                  "dd MMM yyyy', ás' HH:mm",
+                  {
+                    locale: ptBR,
+                  }
+                )}
+              </p>
+            )}
           </header>
 
           <div className={styles.postContent}>
@@ -115,6 +141,32 @@ export default function Post({ post }: PostProps) {
               </div>
             ))}
           </div>
+
+          <footer>
+            <section className={styles.navigationContainer}>
+              {navigation.prevPage && (
+                <span>
+                  <p>{navigation.prevPage.title}</p>
+                  <Link href={`/post/${navigation.prevPage.uid}`}>
+                    <a>Post anterior</a>
+                  </Link>
+                </span>
+              )}
+
+              {navigation.nextPage && (
+                <span className={styles.nextPage}>
+                  <p>{navigation.nextPage.title}</p>
+                  <Link href={`/post/${navigation.nextPage.uid}`}>
+                    <a>Próximo post</a>
+                  </Link>
+                </span>
+              )}
+            </section>
+
+            <Comments postId={post.data.title} />
+
+            {preview && <ExitPreview />}
+          </footer>
         </article>
       </main>
     </>
@@ -139,17 +191,55 @@ export const getStaticPaths: GetStaticPaths = async () => {
   };
 };
 
-export const getStaticProps: GetStaticProps = async context => {
-  const { slug } = context.params;
+export const getStaticProps: GetStaticProps = async ({
+  params,
+  preview = false,
+  previewData,
+}) => {
+  const { slug } = params;
   const prismic = getPrismicClient();
 
-  const response = await prismic.getByUID('posts', String(slug), {});
+  const response = await prismic.getByUID('posts', String(slug), {
+    ref: previewData?.ref ?? null,
+  });
 
   const post = {
     uid: response.uid,
     first_publication_date: response.first_publication_date,
+    last_publication_date: response.last_publication_date,
     data: response.data,
   };
 
-  return { props: { post }, revalidate: 60 * 30 };
+  const {
+    results: [prevPage],
+  } = await prismic.query([Prismic.Predicates.at('document.type', 'posts')], {
+    after: response.id,
+    orderings: '[document.first_publication_date desc]',
+    pageSize: 1,
+  });
+
+  const {
+    results: [nextPage],
+  } = await prismic.query([Prismic.Predicates.at('document.type', 'posts')], {
+    after: response.id,
+    orderings: '[document.first_publication_date]',
+    pageSize: 1,
+  });
+
+  const navigation = {
+    nextPage: nextPage
+      ? { uid: nextPage.uid, title: nextPage.data.title }
+      : null,
+    prevPage: prevPage
+      ? { uid: prevPage.uid, title: prevPage.data.title }
+      : null,
+  };
+
+  return {
+    props: {
+      post,
+      preview,
+      navigation,
+    },
+  };
 };
